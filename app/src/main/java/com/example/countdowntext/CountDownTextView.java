@@ -17,12 +17,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+/**
+ * 
+ */
 public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextView implements LifecycleObserver {
     final private static String TAG = CountDownTextView.class.getSimpleName();
-    //持久化常量
-    private static final String SHARED_PREFERENCE_FILE = "CountDownTextView";
-    private static final String SHARED_PREFERENCE_FILE_START_TIME = "last_start_time";
-    private static final String sa = "dd";
+
     final private static int capacity = 2;
     /**
      * 计时单位
@@ -35,7 +35,13 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
     /**
      * 计时时长,以计时单位为单位
      */
-    private long endtime = 60;
+    private long end_time = 60;
+
+
+    /**
+     * 控件在倒计时过程中是否可点击；
+     */
+    private boolean isClicked = false;
     /**
      * 倒计时文本
      */
@@ -98,6 +104,7 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
         return this;
     }
 
+
     /**
      * 设置计时间隔
      * @param timeUnit 计时单位
@@ -138,35 +145,47 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
         return this;
     }
 
+    public CountDownTextView setEndTime(long endTime){
+        this.end_time = end_time;
+        return this;
+    }
 
+    /**
+     * 设计计时过程中控件是否是可用的
+     * @param clicked
+     * @return
+     */
+    public CountDownTextView setClicked(boolean clicked) {
+        isClicked = clicked;
+        return this;
+    }
     /**
      * 开始计时
      */
     public void startCount(){
-        countDown(TimeUnit.MILLISECONDS.convert(endtime,timeUnit),
-                0,
-                TimeUnit.MICROSECONDS.convert(interval,timeUnit),
+        countDown(TimeUnit.MILLISECONDS.convert(end_time,timeUnit),
+                TimeUnit.MILLISECONDS.convert(interval,timeUnit),
                 timeUnit);
     }
 
     /**
      * 实际计时的类
      * @param endTime 多长时间之后计时结束
-     * @param offset 已经计时了的时间
      * @param interval 计时间隔
      * @param timeUnit 计时单位
      */
-    private void countDown(long endTime, long offset, long interval, final TimeUnit timeUnit){
-        if (offset == 0 && countDownStartListeners.size() != 0){
+    private void countDown(long endTime, long interval, final TimeUnit timeUnit){
+        if ( countDownStartListeners != null && countDownStartListeners.size() != 0){
             for (CountDownStartListener countDownStartListener : countDownStartListeners) {
                 countDownStartListener.onCountDownStart();
             }
         }
+        setEnabled(isClicked);
         countDownTimer = new CountDownTimer(endTime,interval) {
             @Override
             public void onTick(long l) {
                 setText(String.format(countDownText, String.valueOf(timeUnit.convert(l, TimeUnit.MILLISECONDS))));
-                if (countDownTickListeners.size() > 0){
+                if (countDownTickListeners != null && countDownTickListeners.size() > 0){
                     for (CountDownTickListener countDownTickListener : countDownTickListeners) {
                         countDownTickListener.onCountDownTick();
                     }
@@ -176,11 +195,12 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
             @Override
             public void onFinish() {
                 setText(textAfterCountDown);
-                if (countDownOverListeners.size() > 0){
+                if (countDownOverListeners != null && countDownOverListeners.size() > 0){
                     for (CountDownOverListener countDownOverListener : countDownOverListeners) {
                         countDownOverListener.onCountDownOver();
                     }
                 }
+                setEnabled(true);
             }
         };
         countDownTimer.start();
@@ -220,6 +240,7 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
         }
         countDownTickListeners.add(listener);
     }
+
     /**
      * 开始倒计时事件
      */
@@ -262,16 +283,6 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
         }
     }
 
-    /**
-     * 生命周期绑定事件
-     */
-    /**
-     * 组件重新恢复时，如果需要，则继续计时
-     */
-    @OnLifecycleEvent(Lifecycle.Event.ON_RESUME)
-    private void onLifecycleOwnerResume(){
-        //todo
-    }
 
     /**
      * 绑定组件销毁时，取消计时，避免内存泄漏
@@ -292,4 +303,6 @@ public class CountDownTextView extends androidx.appcompat.widget.AppCompatTextVi
         super.onDetachedFromWindow();
         onLifecycleOwnerDestroy();
     }
+
+
 }
